@@ -1,24 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import type { XtreamUserInfo, XtreamCredentials, MainTab } from '../types/iptv';
-import { Flame, ArrowLeft, Clock, ShieldCheck, User } from 'lucide-react';
+import type { MainTab } from '../types/iptv';
+import { Flame, Clock, Wifi } from 'lucide-react';
 
 interface TvTopBarProps {
   tab: MainTab;
-  categoryName?: string;
-  subTitle?: string;
-  userInfo: XtreamUserInfo | null;
-  credentials: XtreamCredentials;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-export const TvTopBar: React.FC<TvTopBarProps> = ({
-  tab,
-  categoryName,
-  subTitle,
-  userInfo,
-  credentials,
-  onBack,
-}) => {
+export const TvTopBar: React.FC<TvTopBarProps> = ({ tab, onBack }) => {
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
 
   useEffect(() => {
@@ -34,89 +23,53 @@ export const TvTopBar: React.FC<TvTopBarProps> = ({
   }, []);
 
   const tabLabel =
-    tab === 'live' ? 'Live TV' : tab === 'movies' ? 'Filmler' : 'Diziler';
-
-  const formatExpiry = (epochStr?: string) => {
-    if (!epochStr) return 'Aktif';
-    const num = parseInt(epochStr, 10);
-    if (isNaN(num) || num <= 0) return 'Süresiz';
-    const date = new Date(num * 1000);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
-  const expiryText = formatExpiry(userInfo?.exp_date);
+    tab === 'live' ? 'Canlı TV' : tab === 'movies' ? 'Filmler' : 'Diziler';
 
   return (
-    <header className="h-16 w-full bg-[#070e1e]/95 border-b border-slate-800/80 px-6 flex items-center justify-between select-none z-20 flex-shrink-0 backdrop-blur-md">
-      {/* Left: Clock, Brand Logo & Breadcrumb Tag */}
-      <div className="flex items-center gap-4">
-        {/* Digital Clock */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-slate-300 font-mono text-xs font-semibold">
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>{currentTimeStr || '00:00'}</span>
-        </div>
-
-        {/* Back to Home Hint */}
-        <button
-          onClick={onBack}
-          title="Ana Karşılama Ekranına Dön (Kumandadan GERİ tuşu)"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs font-medium transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Ana Ekran</span>
-        </button>
-
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <Flame className="w-6 h-6 text-amber-500 fill-amber-500" />
-          <div className="flex items-baseline gap-1">
-            <span className="text-base font-light text-slate-200">Cross</span>
-            <span className="text-base font-black text-white">IPTV</span>
+    <header className="h-11 w-full bg-[#060b17]/90 border-b border-slate-800/60 px-5 flex items-center justify-between select-none z-20 flex-shrink-0 backdrop-blur-md">
+      {/* Left: Minimalist Brand Logo & Subtle Section Tag */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <Flame className="w-4 h-4 text-amber-500 fill-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+          <div className="flex items-baseline gap-0.5 text-sm tracking-wide">
+            <span className="font-light text-slate-300">Cross</span>
+            <span className="font-extrabold text-white">IPTV</span>
           </div>
         </div>
 
-        <div className="h-4 w-px bg-slate-800" />
+        <div className="h-3 w-px bg-slate-800" />
 
-        {/* Section Pill (Yellow Hot IPTV Style) */}
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-md bg-amber-400 text-slate-950 text-xs font-extrabold tracking-wide uppercase shadow-sm">
-            {tabLabel}
-          </span>
-
-          {categoryName && (
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 truncate max-w-xs md:max-w-md">
-              <span className="text-slate-600">›</span>
-              <span className="truncate text-amber-200/90">{categoryName}</span>
-              {subTitle && (
-                <>
-                  <span className="text-slate-600">›</span>
-                  <span className="truncate text-slate-400 font-normal">{subTitle}</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <span className="px-2 py-0.5 rounded text-[11px] font-extrabold tracking-wider uppercase bg-amber-400/10 text-amber-400 border border-amber-400/20">
+          {tabLabel}
+        </span>
       </div>
 
-      {/* Right: Account & Expiry Info Pill */}
-      <div className="flex items-center gap-3">
-        {/* Current list */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
-          <User className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-slate-400">List:</span>
-          <span className="text-amber-400 font-semibold">{credentials.username || 'Default'}</span>
+      {/* Right: Remote Control Back Hint, Online Status & Digital Clock */}
+      <div className="flex items-center gap-3 text-xs">
+        {/* Remote Navigation Hint (informational, non-stealing of focus) */}
+        <div
+          onClick={onBack}
+          className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800/80 text-[10px] font-medium text-slate-400 cursor-pointer hover:text-slate-200 transition-colors"
+          title="Kumandadan Geri (Back) tuşuna basarak ana ekrana dönebilirsiniz"
+        >
+          <span className="font-mono text-slate-500 font-bold">GERİ ↩</span>
+          <span>Ana Ekran</span>
         </div>
 
-        {/* Activation pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-emerald-400 font-medium">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-slate-300">Süre:</span>
-          <span className="font-semibold text-emerald-400">{expiryText}</span>
+        {/* Live Network Status Indicator */}
+        <div className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <Wifi className="w-3 h-3 text-emerald-400" />
+        </div>
+
+        {/* Digital Clock */}
+        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 font-mono text-xs font-semibold">
+          <Clock className="w-3 h-3 text-amber-400" />
+          <span>{currentTimeStr || '00:00'}</span>
         </div>
       </div>
     </header>
   );
 };
+
+export default TvTopBar;

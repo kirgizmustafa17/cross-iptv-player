@@ -1,0 +1,23 @@
+{
+  "devices": {
+    "mavi-kartal-7421": {
+      "deviceId": "mavi-kartal-7421",
+      "pin": "1234",
+      "createdAt": "2026-09-29T21:52:19.465Z",
+      "lastSeen": "2026-09-29T21:52:19.465Z",
+      "playlists": [
+        {
+          "id": "pl-default-1",
+          "name": "Default Xtream",
+          "type": "xtream",
+          "serverUrl": "http://1dhn1.xyz:80",
+          "username": "f5CZ0Qa6",
+          "password": "oFZUHZNe",
+          "isActive": true,
+          "createdAt": "2026-09-29T21:52:19.465Z",
+          "updatedAt": "2026-09-29T21:52:19.465Z"
+        }
+      ]
+    }
+  }
+}

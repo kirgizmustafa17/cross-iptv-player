@@ -70,7 +70,7 @@ class MiniStreamLoader extends (Hls.DefaultConfig.loader as any) {
 export const LiveTvView: React.FC<LiveTvViewProps> = ({
   categories,
   credentials,
-  userInfo,
+  userInfo: _userInfo,
   favorites,
   onToggleFavorite,
   onPlayFullscreen,
@@ -382,15 +382,8 @@ export const LiveTvView: React.FC<LiveTvViewProps> = ({
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#070e1e] text-white overflow-hidden select-none font-sans">
-      {/* Dedicated Top Bar: No cross-section tabs, clean info matching Hot IPTV */}
-      <TvTopBar
-        tab="live"
-        categoryName={activeCategoryName}
-        subTitle={previewChannel ? previewChannel.name : undefined}
-        userInfo={userInfo}
-        credentials={credentials}
-        onBack={onBackToLanding}
-      />
+      {/* Clean & Sleek TV Top Bar */}
+      <TvTopBar tab="live" onBack={onBackToLanding} />
 
       {/* Main 3-Column Split View */}
       <div className="flex-1 flex overflow-hidden p-3 gap-3">

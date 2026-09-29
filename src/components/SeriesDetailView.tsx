@@ -29,7 +29,7 @@ interface SeriesDetailViewProps {
 export const SeriesDetailView: React.FC<SeriesDetailViewProps> = ({
   series,
   credentials,
-  userInfo,
+  userInfo: _userInfo,
   onBack,
   onPlayEpisode,
 }) => {
@@ -270,19 +270,8 @@ export const SeriesDetailView: React.FC<SeriesDetailViewProps> = ({
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#070e1e] text-white overflow-hidden select-none font-sans">
-      {/* Top Bar matching Hot IPTV series details */}
-      <TvTopBar
-        tab="series"
-        categoryName={series.name}
-        subTitle={
-          currentSelectedEpisode
-            ? `${selectedSeason}. Sezon • ${currentSelectedEpisode.episode_num}. Bölüm`
-            : undefined
-        }
-        userInfo={userInfo}
-        credentials={credentials}
-        onBack={onBack}
-      />
+      {/* Clean & Sleek TV Top Bar */}
+      <TvTopBar tab="series" onBack={onBack} />
 
       {/* Main 3-Column Layout: Left (Poster & Seasons) | Center (Episodes) | Right (Preview & Synopsis) */}
       <div className="flex-1 flex overflow-hidden p-3 gap-3">

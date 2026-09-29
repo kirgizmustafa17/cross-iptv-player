@@ -36,7 +36,7 @@ export const VodView: React.FC<VodViewProps> = ({
   type,
   categories,
   credentials,
-  userInfo,
+  userInfo: _userInfo,
   favorites,
   onToggleFavorite,
   onPlayMovie,
@@ -267,14 +267,8 @@ export const VodView: React.FC<VodViewProps> = ({
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#070e1e] text-white overflow-hidden select-none font-sans">
-      {/* Dedicated Top Bar: No cross-section tabs */}
-      <TvTopBar
-        tab={type}
-        categoryName={activeCategoryName}
-        userInfo={userInfo}
-        credentials={credentials}
-        onBack={onBackToLanding}
-      />
+      {/* Clean & Sleek TV Top Bar */}
+      <TvTopBar tab={type} onBack={onBackToLanding} />
 
       {/* 2-Column Split: Categories (Sol) & 5-Column Poster Grid (Sağ) */}
       <div className="flex-1 flex overflow-hidden p-3 gap-3">

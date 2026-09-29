@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross IPTV - Cihaz & Playlist Yönetim Portalı</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #050b14;
+      color: #f1f5f9;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glow-amber {
+      box-shadow: 0 0 35px -5px rgba(245, 158, 11, 0.25);
+    }
+    .glow-blue {
+      box-shadow: 0 0 35px -5px rgba(59, 130, 246, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- Glow Backgrounds -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+  <div class="fixed bottom-0 right-0 w-[500px] h-[300px] bg-amber-500/10 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <i data-lucide="flame" class="w-5 h-5 text-slate-950 fill-slate-950"></i>
+        </div>
+        <div class="flex items-baseline gap-1">
+          <span class="text-xl font-light tracking-wide text-slate-200">Cross</span>
+          <span class="text-xl font-black tracking-wider text-white">IPTV</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 ml-1.5 px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/20">Web Portal</span>
+        </div>
+      </div>
+
+      <div id="deviceBadgeHeader" class="hidden items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-400">Cihaz:</span>
+        <span id="activeDeviceIdHeader" class="font-mono font-bold text-amber-400"></span>
+        <button onclick="disconnectDevice()" class="ml-2 text-slate-500 hover:text-rose-400 transition-colors" title="Bağlantıyı Kes">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-5xl mx-auto px-4 py-8 flex-1 w-full">
+
+    <!-- STEP 1: LOGIN / CONNECT SCREEN (Shown when not connected) -->
+    <div id="connectView" class="max-w-md mx-auto pt-6 pb-12">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl glow-blue">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="tv" class="w-7 h-7"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-white tracking-tight">Cihazınıza Bağlanın</h1>
+          <p class="text-sm text-slate-400 mt-1.5 leading-relaxed">
+            TV ekranınızda görüntülenen okunabilir <span class="text-amber-400 font-mono font-semibold">Device ID</span> kodunu girerek oynatma listelerinizi telefonunuzdan kolayca yönetin.
+          </p>
+        </div>
+
+        <form id="connectForm" onsubmit="handleConnect(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              Device ID (Cihaz Kimliği)
+            </label>
+            <div class="relative">
+              <input
+                type="text"
+                id="inputDeviceId"
+                required
+                placeholder="Örn: mavi-kartal-7421"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-mono text-base focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all placeholder:text-slate-600"
+              />
+              <span class="absolute right-3.5 top-3.5 text-slate-600">
+                <i data-lucide="hash" class="w-5 h-5"></i>
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Hot Player & SS IPTV benzeri kolay okunabilir cihaz adı.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              Cihaz PIN Kodu (İsteğe Bağlı)
+            </label>
+            <div class="relative">
+              <input
+                type="password"
+                id="inputPin"
+                maxlength="6"
+                placeholder="Örn: 1234"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-mono text-base focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all placeholder:text-slate-600"
+              />
+              <span class="absolute right-3.5 top-3.5 text-slate-600">
+                <i data-lucide="key-round" class="w-5 h-5"></i>
+              </span>
+            </div>
+          </div>
+
+          <div id="connectError" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+            <span id="connectErrorMsg">Hata oluştu</span>
+          </div>
+
+          <button
+            type="submit"
+            id="btnConnect"
+            class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-sm py-3.5 px-4 rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Cihazı Yönet & Playlistleri Aç</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-800/80 text-center text-xs text-slate-500">
+          TV'niz açık değil mi? Uygulamayı televizyonunuzda veya tarayıcınızda açtığınızda ekranda Device ID belirecektir.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: DASHBOARD (Shown when device is connected) -->
+    <div id="dashboardView" class="hidden space-y-6">
+
+      <!-- Device Info Bar -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-md">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="monitor" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-white">Bağlı Cihaz</h2>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Çevrimiçi
+              </span>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-slate-400 mt-0.5 font-mono">
+              <span>ID: <strong class="text-amber-400" id="dashDeviceId"></strong></span>
+              <span>•</span>
+              <span id="dashLastSeen"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button
+            onclick="openAddModal()"
+            class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Yeni Playlist Ekle</span>
+          </button>
+
+          <button
+            onclick="loadDevicePlaylists()"
+            class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs py-2.5 px-3 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Listeleri Yenile"
+          >
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Yenile</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Playlists Section -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+            <span>Kayıtlı Oynatma Listeleri</span>
+            <span id="playlistCountBadge" class="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
+          </h3>
+          <p class="text-xs text-slate-400">Aktif olan liste TV uygulamanızda otomatik yüklenir.</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyPlaylists" class="hidden bg-slate-900/40 border border-dashed border-slate-800 rounded-3xl p-12 text-center">
+          <div class="w-16 h-16 rounded-2xl bg-slate-800/50 text-slate-500 flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="film" class="w-8 h-8"></i>
+          </div>
+          <h4 class="text-lg font-bold text-white mb-1">Henüz oynatma listesi eklenmedi</h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto mb-5">
+            Hot Player & SS IPTV'de olduğu gibi Xtream Codes (Kullanıcı Adı/Şifre) veya M3U bağlantınızı ekleyerek TV'nizde hemen izlemeye başlayın.
+          </p>
+          <button
+            onclick="openAddModal()"
+            class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs py-2.5 px-5 rounded-xl shadow-lg shadow-amber-500/20 inline-flex items-center gap-2"
+          >
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>İlk Listeni Ekle</span>
+          </button>
+        </div>
+
+        <!-- Playlists Grid -->
+        <div id="playlistsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Info / Tips Banner -->
+      <div class="bg-blue-950/20 border border-blue-900/30 rounded-2xl p-4 flex items-start gap-3 text-xs text-slate-300">
+        <i data-lucide="info" class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5"></i>
+        <div class="space-y-1">
+          <p class="font-semibold text-blue-200">TV ile Senkronizasyon Nasıl Çalışır?</p>
+          <p class="text-slate-400 leading-relaxed">
+            Buradan bir oynatma listesi eklediğinizde veya "Aktif Yap" butonuna tıkladığınızda, TV uygulamanız bir sonraki açılışta veya ana ekrandaki <strong class="text-amber-400">Yenile</strong> butonuna bastığınızda bu listeyi anında algılar.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- MODAL: ADD / EDIT PLAYLIST -->
+  <div id="playlistModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative">
+      <button onclick="closeModal()" class="absolute right-5 top-5 text-slate-400 hover:text-white transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="mb-5">
+        <h3 id="modalTitle" class="text-xl font-bold text-white">Yeni Oynatma Listesi Ekle</h3>
+        <p class="text-xs text-slate-400 mt-1">Xtream Codes API veya standart M3U formatını seçebilirsiniz.</p>
+      </div>
+
+      <!-- Type Switcher Tabs -->
+      <div class="flex p-1 bg-slate-950 rounded-xl mb-5 border border-slate-800">
+        <button
+          type="button"
+          id="tabXtream"
+          onclick="switchTab('xtream')"
+          class="flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-400 text-slate-950 shadow-md"
+        >
+          <i data-lucide="server" class="w-3.5 h-3.5"></i>
+          <span>Xtream Codes API</span>
+        </button>
+        <button
+          type="button"
+          id="tabM3u"
+          onclick="switchTab('m3u')"
+          class="flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white"
+        >
+          <i data-lucide="link" class="w-3.5 h-3.5"></i>
+          <span>M3U URL Linki</span>
+        </button>
+      </div>
+
+      <form id="playlistForm" onsubmit="handleSavePlaylist(event)" class="space-y-4">
+        <input type="hidden" id="editPlaylistId" value="">
+
+        <!-- Playlist Name -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Liste Adı</label>
+          <input
+            type="text"
+            id="plName"
+            required
+            placeholder="Örn: Ev Televizyonu veya Spor Paketi"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+          />
+        </div>
+
+        <!-- Xtream Inputs -->
+        <div id="xtreamFields" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Sunucu Adresi (Server URL / Host)</label>
+            <input
+              type="url"
+              id="xtreamServer"
+              placeholder="http://example.com:8080"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Kullanıcı Adı (Username)</label>
+              <input
+                type="text"
+                id="xtreamUser"
+                placeholder="Kullanıcı adı"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Şifre (Password)</label>
+              <input
+                type="password"
+                id="xtreamPass"
+                placeholder="Şifre"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- M3U Inputs -->
+        <div id="m3uFields" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">M3U Playlist URL</label>
+            <input
+              type="url"
+              id="m3uUrl"
+              placeholder="http://domain.com/get.php?username=...&type=m3u_plus"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+            />
+          </div>
+        </div>
+
+        <!-- EPG (Optional) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">EPG Kaynağı (İsteğe Bağlı XMLTV URL)</label>
+          <input
+            type="url"
+            id="plEpg"
+            placeholder="http://domain.com/epg.xml"
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-amber-400"
+          />
+        </div>
+
+        <!-- Test Connection Result Box -->
+        <div id="testResultBox" class="hidden p-3 rounded-xl text-xs font-medium border flex items-start gap-2.5">
+          <i id="testResultIcon" data-lucide="check-circle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+          <span id="testResultText">Sonuç</span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            onclick="testCurrentConnection()"
+            id="btnTestConn"
+            class="flex-1 py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Bağlantıyı Test Et</span>
+          </button>
+
+          <button
+            type="submit"
+            id="btnSavePl"
+            class="flex-1 py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            <span>Kaydet & Gönder</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-900 bg-slate-950/60 py-6 text-center text-xs text-slate-600">
+    <p>Cross IPTV Player • Güvenli Cihaz & Playlist Yönetim Portalı</p>
+    <p class="text-[11px] text-slate-700 mt-1">Hot Player & SS IPTV standartlarıyla tam uyumlu bulut senkronizasyonu.</p>
+  </footer>
+
+  <script>
+    // State
+    let currentDeviceId = null;
+    let currentPin = '';
+    let currentPlaylists = [];
+    let activeType = 'xtream';
+
+    // Check URL params and localStorage on load
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlDevice = urlParams.get('device') || urlParams.get('id');
+      const urlPin = urlParams.get('pin');
+
+      const targetDevice = urlDevice || localStorage.getItem('portal_device_id');
+      const targetPin = urlPin || localStorage.getItem('portal_pin') || '';
+
+      if (targetDevice) {
+        document.getElementById('inputDeviceId').value = targetDevice;
+        document.getElementById('inputPin').value = targetPin;
+        connectToDevice(targetDevice, targetPin);
+      }
+    });
+
+    async function handleConnect(e) {
+      e.preventDefault();
+      const deviceId = document.getElementById('inputDeviceId').value.trim();
+      const pin = document.getElementById('inputPin').value.trim();
+
+      if (!deviceId) return;
+      await connectToDevice(deviceId, pin);
+    }
+
+    async function connectToDevice(deviceId, pin) {
+      const errBox = document.getElementById('connectError');
+      const errMsg = document.getElementById('connectErrorMsg');
+      const btn = document.getElementById('btnConnect');
+
+      errBox.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin inline-block mr-2"><i data-lucide="loader-2" class="w-4 h-4"></i></span> Bağlanılıyor...`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch(`/api/device/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, pin }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Bağlantı başarısız');
+        }
+
+        currentDeviceId = deviceId;
+        currentPin = pin;
+        localStorage.setItem('portal_device_id', deviceId);
+        localStorage.setItem('portal_pin', pin);
+
+        showDashboard(data.device);
+      } catch (err) {
+        errMsg.innerText = err.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Cihazı Yönet & Playlistleri Aç</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+        lucide.createIcons();
+      }
+    }
+
+    function showDashboard(device) {
+      document.getElementById('connectView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('deviceBadgeHeader').classList.remove('hidden');
+      document.getElementById('deviceBadgeHeader').classList.add('flex');
+
+      document.getElementById('activeDeviceIdHeader').innerText = device.deviceId;
+      document.getElementById('dashDeviceId').innerText = device.deviceId;
+      document.getElementById('dashLastSeen').innerText = 'Son görülme: ' + new Date(device.lastSeen).toLocaleTimeString();
+
+      currentPlaylists = device.playlists || [];
+      renderPlaylists();
+      lucide.createIcons();
+    }
+
+    function disconnectDevice() {
+      localStorage.removeItem('portal_device_id');
+      localStorage.removeItem('portal_pin');
+      currentDeviceId = null;
+      currentPin = '';
+
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('deviceBadgeHeader').classList.add('hidden');
+      document.getElementById('deviceBadgeHeader').classList.remove('flex');
+      document.getElementById('connectView').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    async function loadDevicePlaylists() {
+      if (!currentDeviceId) return;
+      try {
+        const res = await fetch(`/api/device/${encodeURIComponent(currentDeviceId)}/playlists`);
+        if (res.ok) {
+          currentPlaylists = await res.json();
+          renderPlaylists();
+        }
+      } catch (e) {
+        console.error('Failed to reload playlists', e);
+      }
+    }
+
+    function renderPlaylists() {
+      const container = document.getElementById('playlistsGrid');
+      const emptyState = document.getElementById('emptyPlaylists');
+      const countBadge = document.getElementById('playlistCountBadge');
+
+      countBadge.innerText = currentPlaylists.length;
+
+      if (!currentPlaylists || currentPlaylists.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      container.innerHTML = currentPlaylists.map(pl => {
+        const isActive = pl.isActive;
+        const isXtream = pl.type === 'xtream';
+
+        return `
+          <div class="bg-slate-900/80 border ${isActive ? 'border-amber-400/80 ring-1 ring-amber-400/40' : 'border-slate-800'} rounded-2xl p-5 flex flex-col justify-between transition-all hover:border-slate-700 shadow-xl">
+            <div>
+              <div class="flex items-start justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl ${isXtream ? 'bg-amber-400/10 text-amber-400 border border-amber-400/20' : 'bg-blue-400/10 text-blue-400 border border-blue-400/20'} flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="${isXtream ? 'server' : 'link'}" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-white text-sm tracking-wide leading-tight">${escapeHtml(pl.name)}</h4>
+                    <span class="text-[10px] uppercase font-mono font-semibold text-slate-400">${isXtream ? 'Xtream Codes API' : 'M3U Link'}</span>
+                  </div>
+                </div>
+
+                ${isActive ? `
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase bg-amber-400 text-slate-950 shadow-sm">
+                    <i data-lucide="check" class="w-3 h-3"></i> TV'de Aktif
+                  </span>
+                ` : `
+                  <button onclick="setActivePlaylist('${pl.id}')" class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                    Aktif Yap
+                  </button>
+                `}
+              </div>
+
+              <!-- Details -->
+              <div class="bg-slate-950/60 rounded-xl p-3 text-xs space-y-1 font-mono text-slate-300 border border-slate-800/80 mb-4 overflow-hidden">
+                ${isXtream ? `
+                  <div class="truncate text-slate-400"><span class="text-slate-500">Host:</span> ${escapeHtml(pl.serverUrl || '')}</div>
+                  <div class="truncate"><span class="text-slate-500">User:</span> <span class="text-amber-300 font-semibold">${escapeHtml(pl.username || '')}</span></div>
+                ` : `
+                  <div class="truncate text-slate-400"><span class="text-slate-500">URL:</span> ${escapeHtml(pl.m3uUrl || '')}</div>
+                `}
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs">
+              <button onclick="testExistingPlaylist('${pl.id}')" class="text-slate-400 hover:text-amber-400 flex items-center gap-1.5 font-medium transition-colors">
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                <span>Test Et</span>
+              </button>
+
+              <div class="flex items-center gap-2">
+                <button onclick="openEditModal('${pl.id}')" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors" title="Düzenle">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="deletePlaylist('${pl.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors" title="Sil">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function setActivePlaylist(playlistId) {
+      if (!currentDeviceId) return;
+      try {
+        const res = await fetch(`/api/device/${encodeURIComponent(currentDeviceId)}/playlists/${playlistId}/activate`, {
+          method: 'POST',
+        });
+        if (res.ok) {
+          await loadDevicePlaylists();
+        }
+      } catch (e) {
+        alert('Aktif playlist güncellenemedi: ' + e.message);
+      }
+    }
+
+    async function deletePlaylist(playlistId) {
+      if (!confirm('Bu oynatma listesini silmek istediğinizden emin misiniz?')) return;
+      try {
+        const res = await fetch(`/api/device/${encodeURIComponent(currentDeviceId)}/playlists/${playlistId}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          await loadDevicePlaylists();
+        }
+      } catch (e) {
+        alert('Playlist silinemedi: ' + e.message);
+      }
+    }
+
+    // Modal & Form Handlers
+    function switchTab(type) {
+      activeType = type;
+      const tabXtream = document.getElementById('tabXtream');
+      const tabM3u = document.getElementById('tabM3u');
+      const xFields = document.getElementById('xtreamFields');
+      const mFields = document.getElementById('m3uFields');
+
+      if (type === 'xtream') {
+        tabXtream.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-400 text-slate-950 shadow-md';
+        tabM3u.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+        xFields.classList.remove('hidden');
+        mFields.classList.add('hidden');
+      } else {
+        tabM3u.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 bg-amber-400 text-slate-950 shadow-md';
+        tabXtream.className = 'flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+        mFields.classList.remove('hidden');
+        xFields.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function openAddModal() {
+      document.getElementById('modalTitle').innerText = 'Yeni Oynatma Listesi Ekle';
+      document.getElementById('editPlaylistId').value = '';
+      document.getElementById('plName').value = '';
+      document.getElementById('xtreamServer').value = '';
+      document.getElementById('xtreamUser').value = '';
+      document.getElementById('xtreamPass').value = '';
+      document.getElementById('m3uUrl').value = '';
+      document.getElementById('plEpg').value = '';
+      document.getElementById('testResultBox').classList.add('hidden');
+      switchTab('xtream');
+      document.getElementById('playlistModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function openEditModal(playlistId) {
+      const pl = currentPlaylists.find(p => p.id === playlistId);
+      if (!pl) return;
+
+      document.getElementById('modalTitle').innerText = 'Oynatma Listesini Düzenle';
+      document.getElementById('editPlaylistId').value = pl.id;
+      document.getElementById('plName').value = pl.name || '';
+      document.getElementById('xtreamServer').value = pl.serverUrl || '';
+      document.getElementById('xtreamUser').value = pl.username || '';
+      document.getElementById('xtreamPass').value = pl.password || '';
+      document.getElementById('m3uUrl').value = pl.m3uUrl || '';
+      document.getElementById('plEpg').value = pl.epgUrl || '';
+      document.getElementById('testResultBox').classList.add('hidden');
+
+      switchTab(pl.type || 'xtream');
+      document.getElementById('playlistModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('playlistModal').classList.add('hidden');
+    }
+
+    async function handleSavePlaylist(e) {
+      e.preventDefault();
+      const editId = document.getElementById('editPlaylistId').value;
+      const name = document.getElementById('plName').value.trim();
+      const epgUrl = document.getElementById('plEpg').value.trim();
+      const btn = document.getElementById('btnSavePl');
+
+      const payload = {
+        name,
+        type: activeType,
+        epgUrl,
+      };
+
+      if (activeType === 'xtream') {
+        payload.serverUrl = document.getElementById('xtreamServer').value.trim();
+        payload.username = document.getElementById('xtreamUser').value.trim();
+        payload.password = document.getElementById('xtreamPass').value.trim();
+        if (!payload.serverUrl || !payload.username || !payload.password) {
+          alert('Lütfen Sunucu Adresi, Kullanıcı Adı ve Şifreyi eksiksiz doldurun.');
+          return;
+        }
+      } else {
+        payload.m3uUrl = document.getElementById('m3uUrl').value.trim();
+        if (!payload.m3uUrl) {
+          alert('Lütfen M3U URL bağlantısını girin.');
+          return;
+        }
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Kaydediliyor...';
+
+      try {
+        const url = editId
+          ? `/api/device/${encodeURIComponent(currentDeviceId)}/playlists/${editId}`
+          : `/api/device/${encodeURIComponent(currentDeviceId)}/playlists`;
+
+        const method = editId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Kaydedilemedi');
+        }
+
+        closeModal();
+        await loadDevicePlaylists();
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="save" class="w-3.5 h-3.5"></i><span>Kaydet & Gönder</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    async function testCurrentConnection() {
+      const box = document.getElementById('testResultBox');
+      const text = document.getElementById('testResultText');
+      const icon = document.getElementById('testResultIcon');
+      const btn = document.getElementById('btnTestConn');
+
+      box.classList.remove('hidden');
+      box.className = 'p-3 rounded-xl text-xs font-medium border border-blue-500/30 bg-blue-500/10 text-blue-300 flex items-start gap-2.5';
+      text.innerText = 'Sunucuya bağlanılıyor, lütfen bekleyin...';
+      btn.disabled = true;
+
+      try {
+        if (activeType === 'xtream') {
+          const serverUrl = document.getElementById('xtreamServer').value.trim();
+          const username = document.getElementById('xtreamUser').value.trim();
+          const password = document.getElementById('xtreamPass').value.trim();
+
+          if (!serverUrl || !username || !password) {
+            throw new Error('Test için Sunucu URL, Kullanıcı Adı ve Şifre zorunludur.');
+          }
+
+          const res = await fetch('/api/test/xtream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ serverUrl, username, password }),
+          });
+
+          const data = await res.json();
+          if (data.success) {
+            box.className = 'p-3 rounded-xl text-xs font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 flex items-start gap-2.5';
+            text.innerHTML = `<strong>Bağlantı Başarılı!</strong> Durum: ${data.userInfo.status || 'Active'}, Bitiş Tarihi: ${formatDate(data.userInfo.exp_date)}`;
+          } else {
+            throw new Error(data.error || 'Giriş Başarısız');
+          }
+        } else {
+          const m3uUrl = document.getElementById('m3uUrl').value.trim();
+          if (!m3uUrl) throw new Error('Test için M3U URL bağlantısı zorunludur.');
+
+          const res = await fetch('/api/test/m3u', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ m3uUrl }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            box.className = 'p-3 rounded-xl text-xs font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 flex items-start gap-2.5';
+            text.innerText = data.message;
+          } else {
+            throw new Error(data.error || 'M3U Erişilemedi');
+          }
+        }
+      } catch (err) {
+        box.className = 'p-3 rounded-xl text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 flex items-start gap-2.5';
+        text.innerText = 'Hata: ' + err.message;
+      } finally {
+        btn.disabled = false;
+        lucide.createIcons();
+      }
+    }
+
+    async function testExistingPlaylist(playlistId) {
+      const pl = currentPlaylists.find(p => p.id === playlistId);
+      if (!pl) return;
+
+      if (pl.type === 'xtream') {
+        const res = await fetch('/api/test/xtream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serverUrl: pl.serverUrl,
+            username: pl.username,
+            password: pl.password,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ '${pl.name}' Bağlantısı Başarılı!\nDurum: ${data.userInfo.status}\nBitiş: ${formatDate(data.userInfo.exp_date)}`);
+        } else {
+          alert(`❌ '${pl.name}' Bağlantı Hatası: ${data.error}`);
+        }
+      } else {
+        const res = await fetch('/api/test/m3u', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ m3uUrl: pl.m3uUrl }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ '${pl.name}' M3U Bağlantısı Başarılı!\n${data.message}`);
+        } else {
+          alert(`❌ '${pl.name}' Bağlantı Hatası: ${data.error}`);
+        }
+      }
+    }
+
+    function formatDate(epochStr) {
+      if (!epochStr) return 'Süresiz';
+      const num = parseInt(epochStr, 10);
+      if (isNaN(num) || num <= 0) return 'Süresiz';
+      const d = new Date(num * 1000);
+      return d.toLocaleDateString('tr-TR');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+  </script>
+</body>
+</html>

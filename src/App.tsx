@@ -14,6 +14,14 @@ import {
   toggleFavorite,
 } from './services/storage';
 import {
+  getOrCreateDeviceInfo,
+  type StoredPlaylist,
+} from './services/device';
+import {
+  syncDeviceWithBackend,
+  activatePlaylist,
+} from './services/deviceClient';
+import {
   authenticateXtream,
   getLiveCategories,
   getLiveStreams,
@@ -28,6 +36,8 @@ import { VodView } from './components/VodView';
 import { SeriesDetailView } from './components/SeriesDetailView';
 import { PlayerView } from './components/PlayerView';
 import { LoginModal } from './components/LoginModal';
+import { PlaylistSwitcherModal } from './components/PlaylistSwitcherModal';
+import { DevicePortalModal } from './components/DevicePortalModal';
 
 type AppScreen = 'landing' | 'live' | 'movies' | 'series' | 'series-detail';
 
@@ -35,10 +45,22 @@ export const App: React.FC = () => {
   // Current Active Screen
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
 
+  // Device Info (Slug ID: mavi-kartal-7421, PIN: 1234)
+  const [deviceInfo] = useState(() => getOrCreateDeviceInfo());
+
   // Credentials & User Info
   const [credentials, setCredentials] = useState<XtreamCredentials>(getStoredCredentials);
   const [userInfo, setUserInfo] = useState<XtreamUserInfo | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // Playlists synced from backend
+  const [playlists, setPlaylists] = useState<StoredPlaylist[]>([]);
+  const [activePlaylist, setActivePlaylist] = useState<StoredPlaylist | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Modals
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState<boolean>(false);
+  const [isPortalModalOpen, setIsPortalModalOpen] = useState<boolean>(false);
 
   // Categories
   const [liveCategories, setLiveCategories] = useState<Category[]>([]);
@@ -53,6 +75,35 @@ export const App: React.FC = () => {
 
   // Favorites
   const [favorites, setFavorites] = useState<number[]>(getFavorites);
+
+  // Sync with backend & load initial playlists
+  const syncWithCloud = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const syncResult = await syncDeviceWithBackend();
+      setPlaylists(syncResult.playlists);
+      if (syncResult.activePlaylist) {
+        setActivePlaylist(syncResult.activePlaylist);
+        if (
+          syncResult.activePlaylist.type === 'xtream' &&
+          syncResult.activePlaylist.serverUrl &&
+          syncResult.activePlaylist.username &&
+          syncResult.activePlaylist.password
+        ) {
+          const newCreds: XtreamCredentials = {
+            serverUrl: syncResult.activePlaylist.serverUrl,
+            username: syncResult.activePlaylist.username,
+            password: syncResult.activePlaylist.password,
+          };
+          setCredentials(newCreds);
+        }
+      }
+    } catch (err) {
+      console.warn('Sync with cloud failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   // Initial load: authenticate and fetch all 3 category sets
   const loadInitialData = useCallback(async (creds: XtreamCredentials) => {
@@ -74,9 +125,39 @@ export const App: React.FC = () => {
     }
   }, []);
 
+  // Initial boot effect: sync with cloud first, then load initial categories
+  useEffect(() => {
+    syncWithCloud();
+  }, [syncWithCloud]);
+
   useEffect(() => {
     loadInitialData(credentials);
   }, [credentials, loadInitialData]);
+
+  // Handler for full refresh & cloud sync
+  const handleFullRefresh = useCallback(async () => {
+    await syncWithCloud();
+    await loadInitialData(credentials);
+  }, [syncWithCloud, loadInitialData, credentials]);
+
+  // Handler for switching active playlist
+  const handleSelectPlaylist = useCallback(
+    async (pl: StoredPlaylist) => {
+      setActivePlaylist(pl);
+      if (pl.type === 'xtream' && pl.serverUrl && pl.username && pl.password) {
+        const newCreds: XtreamCredentials = {
+          serverUrl: pl.serverUrl,
+          username: pl.username,
+          password: pl.password,
+        };
+        saveCredentials(newCreds);
+        setCredentials(newCreds);
+        await activatePlaylist(deviceInfo.deviceId, pl.id);
+        await loadInitialData(newCreds);
+      }
+    },
+    [deviceInfo.deviceId, loadInitialData]
+  );
 
   // Android TV Hardware Back Button listener
   useEffect(() => {
@@ -86,11 +167,15 @@ export const App: React.FC = () => {
       CapacitorApp.addListener('backButton', () => {
         if (activeMedia) {
           setActiveMedia(null);
+        } else if (isPortalModalOpen) {
+          setIsPortalModalOpen(false);
+        } else if (isPlaylistModalOpen) {
+          setIsPlaylistModalOpen(false);
+        } else if (isLoginModalOpen) {
+          setIsLoginModalOpen(false);
         } else if (currentScreen === 'series-detail') {
           setCurrentScreen('series');
           setSelectedSeries(null);
-        } else if (isSettingsOpen) {
-          setIsSettingsOpen(false);
         } else if (currentScreen !== 'landing') {
           setCurrentScreen('landing');
         } else {
@@ -108,7 +193,13 @@ export const App: React.FC = () => {
         listenerHandle.remove();
       }
     };
-  }, [activeMedia, currentScreen, isSettingsOpen]);
+  }, [
+    activeMedia,
+    currentScreen,
+    isPortalModalOpen,
+    isPlaylistModalOpen,
+    isLoginModalOpen,
+  ]);
 
   // Favorite toggle handler
   const handleToggleFavorite = (e: React.MouseEvent, streamId: number) => {
@@ -160,22 +251,51 @@ export const App: React.FC = () => {
         <LandingPage
           userInfo={userInfo}
           credentials={credentials}
+          deviceInfo={deviceInfo}
+          activePlaylist={activePlaylist}
+          playlistsCount={playlists.length}
           liveCount={liveCategories.length}
           movieCount={movieCategories.length}
           seriesCount={seriesCategories.length}
+          isSyncing={isSyncing}
           onSelectSection={(tab) => setCurrentScreen(tab)}
-          onRefresh={() => loadInitialData(credentials)}
-          onChangePlaylist={() => setIsSettingsOpen(true)}
+          onRefresh={handleFullRefresh}
+          onOpenPlaylistSwitcher={() => setIsPlaylistModalOpen(true)}
+          onOpenPortalModal={() => setIsPortalModalOpen(true)}
         />
 
+        {/* Modal: Playlist Switcher (TV friendly list selection) */}
+        <PlaylistSwitcherModal
+          isOpen={isPlaylistModalOpen}
+          onClose={() => setIsPlaylistModalOpen(false)}
+          playlists={playlists}
+          activePlaylistId={activePlaylist?.id}
+          deviceId={deviceInfo.deviceId}
+          onSelectPlaylist={handleSelectPlaylist}
+          onOpenManualEntry={() => {
+            setIsPlaylistModalOpen(false);
+            setIsLoginModalOpen(true);
+          }}
+        />
+
+        {/* Modal: Web Portal QR & Device Info */}
+        <DevicePortalModal
+          isOpen={isPortalModalOpen}
+          onClose={() => setIsPortalModalOpen(false)}
+          deviceId={deviceInfo.deviceId}
+          pin={deviceInfo.pin}
+        />
+
+        {/* Modal: Manual Xtream credentials entry */}
         <LoginModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
           initialCreds={credentials}
           onSave={(newCreds) => {
             saveCredentials(newCreds);
             setCredentials(newCreds);
-            setIsSettingsOpen(false);
+            setIsLoginModalOpen(false);
+            loadInitialData(newCreds);
           }}
         />
       </>
