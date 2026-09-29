@@ -1,0 +1,17 @@
+{
+  "id": "com.cross.iptv.player",
+  "version": "1.0.0",
+  "vendor": "Open Source IPTV",
+  "type": "web",
+  "main": "index.html",
+  "title": "Cross IPTV Player",
+  "icon": "favicon.svg",
+  "largeIcon": "favicon.svg",
+  "resolution": "1920x1080",
+  "requiredPermissions": [
+    "network"
+  ],
+  "accessibility": {
+    "supportsAudioGuidance": false
+  }
+}
